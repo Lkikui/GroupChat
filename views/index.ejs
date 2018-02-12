@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <!-- <link rel='stylesheet' href='/style.css'> -->
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Group Chat</title>
+    <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+    <script type ="text/javascript" src="/socket.io/socket.io.js"></script>
+    <script type ="text/javascript">
+        $(document). ready(function (){
+            var socket  = io.connect("http://localhost:8000");
+            
+            var new_user;
+
+            function newUser() {
+                new_user = prompt('Your name:');
+                socket.emit('got_new_user', {username: new_user});
+            }
+            
+            newUser();
+            
+            socket.on('new_user', function (data){
+                console.log("new user: ");
+                console.log(data.new_user_name);
+
+                for(var message in data.history) {
+                    var entry = document.createElement("p");
+                    entry.innerHTML = data.history[message];
+                    $('#chat_room').append(entry);
+                }
+            });
+            
+            socket.on('failed_user', function(data) {
+                console.log(data.error);
+                newUser();
+            })
+            
+            $('button').click(function(event) {
+                event.preventDefault();
+                console.log($('.message').val());
+                
+                var message = $('.message').val();
+                socket.emit("sending_message", {text: new_user + ': ' + message});
+            })
+            
+            socket.on('sending_message', function (message) {
+                console.log("message sent from client:"); 
+                console.log(message.text);
+                var new_message = document.createElement("p");
+                new_message.innerHTML = message.text;
+                $("#chat_room").append(new_message);
+            });
+
+            socket.on('chat_history', function(data) {
+                var new_message = document.createElement("p");
+                new_message.innerHTML = data.message;
+                $('#chat_room').append(new_message);
+            });
+            
+            socket.on('disconnect_user', function (data){
+                console.log(`disconnected user: ${data}`);
+            });
+        })
+    </script>
+</head>
+<body>
+    <b><u>Conversation Board</u></b>
+    <div id = "chat_room"></div>
+    <form>
+        <input type="text" name="message" placeholder="enter your message here" class="message">
+        <button class="send_message_button">Send</button>
+    </form>
+</body>
+</html>
